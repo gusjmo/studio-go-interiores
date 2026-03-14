@@ -54,7 +54,7 @@ form.addEventListener('submit', (e) => {
 
   const msg = `Olá, Gabriela! 👋\n\nMeu nome é *${nome}*.\nWhatsApp: ${tel}\nE-mail: ${email}\nObjetivo: ${obj}\n\nGostaria de saber mais sobre o Método All Inclusive®.`;
 
-  const url = `https://wa.me/5511999999999?text=${encodeURIComponent(msg)}`;
+  const url = `https://wa.me/5511945809774?text=${encodeURIComponent(msg)}`;
   window.open(url, '_blank');
 });
 
