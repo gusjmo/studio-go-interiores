@@ -1,5 +1,5 @@
 // =====================
-// NAV — encolhe ao rolar
+// NAV — encolhe e muda bg ao rolar
 // =====================
 const nav = document.querySelector('.nav');
 
@@ -13,108 +13,145 @@ window.addEventListener('scroll', () => {
 
 
 // =====================
-// ANIMAÇÃO DE ENTRADA
-// Elementos aparecem ao entrar na tela
+// ANIMAÇÃO DE ENTRADA (Staggered Reveal)
 // =====================
 const observerOptions = {
-  threshold: 0.15,
+  threshold: 0.1,
   rootMargin: '0px 0px -50px 0px'
 };
 
 const observer = new IntersectionObserver((entries) => {
   entries.forEach(entry => {
     if (entry.isIntersecting) {
-      entry.target.classList.add('visivel');
+      // Pega o atraso definido no HTML ou usa 0
+      const delay = entry.target.getAttribute('data-delay') || 0;
+      
+      // Aplica o timeout baseado no data-delay (ex: delay 1 = 150ms)
+      setTimeout(() => {
+        entry.target.classList.add('active');
+      }, delay * 150);
+      
+      // Desobserva após animar uma vez
       observer.unobserve(entry.target);
     }
   });
 }, observerOptions);
 
-document.querySelectorAll(
-  '.etapa, .res-card, .serv-card, .dep-card, .dor-item'
-).forEach(el => {
-  el.classList.add('fade-in');
+// Pega todos os itens que devem ser revelados
+document.querySelectorAll('.reveal-item').forEach(el => {
   observer.observe(el);
 });
 
+// Efeito Parallax sutil no background do Hero ao mover o mouse (Apenas Desktop)
+const heroBg = document.querySelector('.hero-bg');
+const hero = document.querySelector('.hero');
 
-// =====================
-// FORMULÁRIO
-// Redireciona para WhatsApp ao enviar
-// =====================
-const form = document.getElementById('leadForm');
-
-form.addEventListener('submit', (e) => {
-  e.preventDefault();
-
-  const nome = form.querySelector('input[type="text"]').value;
-  const tel = form.querySelector('input[type="tel"]').value;
-  const email = form.querySelector('input[type="email"]').value;
-  const obj = form.querySelector('select').value;
-
-  const msg = `Olá, Gabriela! 👋\n\nMeu nome é *${nome}*.\nWhatsApp: ${tel}\nE-mail: ${email}\nObjetivo: ${obj}\n\nGostaria de saber mais sobre o Método All Inclusive®.`;
-
-  const url = `https://wa.me/5511945809774?text=${encodeURIComponent(msg)}`;
-  window.open(url, '_blank');
-});
-
-
-// =====================
-// SCROLL SUAVE
-// Para links de âncora (#contato, etc.)
-// =====================
-document.querySelectorAll('a[href^="#"]').forEach(link => {
-  link.addEventListener('click', (e) => {
-    e.preventDefault();
-    const target = document.querySelector(link.getAttribute('href'));
-    if (target) {
-      target.scrollIntoView({ behavior: 'smooth' });
-    }
+if (window.innerWidth > 768 && heroBg && hero) {
+  hero.addEventListener('mousemove', (e) => {
+    const x = (e.clientX / window.innerWidth - 0.5) * 20; // max 20px move
+    const y = (e.clientY / window.innerHeight - 0.5) * 20;
+    
+    heroBg.style.transform = `scale(1.05) translate(${x}px, ${y}px)`;
   });
-});
-// PROTEÇÃO ANTI-SPAM
+
+  hero.addEventListener('mouseleave', () => {
+    heroBg.style.transform = `scale(1.05) translate(0px, 0px)`;
+  });
+}
+
+// =====================
+// FORMULÁRIO e PROTEÇÃO
+// =====================
+const form = document.querySelector('.form');
 let ultimoEnvio = 0;
 const INTERVALO_MINIMO = 30000;
 
 function validarFormulario(dados) {
   const nomeValido = dados.nome && dados.nome.length >= 3 && dados.nome.length <= 100;
+  // RegEx básica para fone: permite ddd, numero, espacos, tracos e parenteses
   const telefoneValido = dados.telefone && /^[\d\s\(\)\-\+]{8,20}$/.test(dados.telefone);
-  const mensagemValida = !dados.mensagem || dados.mensagem.length <= 500;
-  const semHtml = !/[<>]/.test(dados.nome + dados.telefone + (dados.mensagem || ''));
-  return nomeValido && telefoneValido && mensagemValida && semHtml;
+  const emailValido = dados.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dados.email);
+  const objetivoValido = dados.objetivo && dados.objetivo.trim() !== '';
+
+  const semHtml = !/[<>]/.test(dados.nome + dados.telefone + dados.email);
+  
+  return nomeValido && telefoneValido && emailValido && objetivoValido && semHtml;
 }
 
-document.addEventListener('DOMContentLoaded', function () {
-  const form = document.querySelector('form');
-  if (!form) return;
-
+if (form) {
   form.addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    // Proteção honeypot
     const honeypot = form.querySelector('input[name="_honey"]');
     if (honeypot && honeypot.value !== '') {
-      e.preventDefault();
-      return;
+      return; // Stop silently for bots
     }
 
+    // Proteção span/intervalo
     const agora = Date.now();
     if (agora - ultimoEnvio < INTERVALO_MINIMO) {
-      e.preventDefault();
       alert('Aguarde alguns segundos antes de enviar novamente.');
       return;
     }
 
+    // Coleta dados
     const dados = {
-      nome: form.querySelector('input[name="nome"], input[name="name"]')?.value || '',
-      telefone: form.querySelector('input[name="telefone"], input[name="phone"], input[name="whatsapp"]')?.value || '',
-      mensagem: form.querySelector('textarea')?.value || ''
+      nome: form.querySelector('#nome').value,
+      telefone: form.querySelector('#telefone').value,
+      email: form.querySelector('#email').value,
+      objetivo: form.querySelector('#objetivo').value
     };
 
     if (!validarFormulario(dados)) {
-      e.preventDefault();
-      alert('Por favor, verifique os dados preenchidos.');
+      alert('Por favor, verifique se todos os dados foram preenchidos corretamente.');
       return;
     }
 
+    // Atualiza ultimo envio
     ultimoEnvio = agora;
+
+    // Monta a mensagem para WhatsApp
+    const msg = `Olá, Gabriela! 👋\n\nMeu nome é *${dados.nome}*.\nE-mail: ${dados.email}\nObjetivo: ${dados.objetivo}\n\nGostaria de saber mais sobre o Método All Inclusive®.`;
+    const url = `https://wa.me/5511945809774?text=${encodeURIComponent(msg)}`;
+    
+    // Efeito visual no botão de enviando...
+    const btnSubmit = form.querySelector('.btn-submit');
+    const originalText = btnSubmit.innerText;
+    btnSubmit.innerText = "Redirecionando...";
+    btnSubmit.style.opacity = 0.7;
+
+    setTimeout(() => {
+      window.open(url, '_blank');
+      btnSubmit.innerText = originalText;
+      btnSubmit.style.opacity = 1;
+      form.reset(); // Limpa form opcionalmente
+    }, 800);
+    
+  });
+}
+
+
+// =====================
+// SCROLL SUAVE para âncoras
+// =====================
+document.querySelectorAll('a[href^="#"]').forEach(link => {
+  link.addEventListener('click', (e) => {
+    const targetId = link.getAttribute('href');
+    if(targetId === '#') return;
+    
+    const target = document.querySelector(targetId);
+    if (target) {
+      e.preventDefault();
+      // Compensa fixed header height (aprox 70px)
+      const headerOffset = 70;
+      const elementPosition = target.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+      window.scrollTo({
+         top: offsetPosition,
+         behavior: "smooth"
+      });
+    }
   });
 });
-
